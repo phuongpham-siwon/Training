@@ -53,7 +53,7 @@ class Agent:
         self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY")) # SDK
         self.model = "gpt-5"
         self.tools = tools
-        # self.tool_map = {tool.get_schema()["name"]: tool for tool in tools}
+        self.tool_map = {tool.get_schema()["name"]: tool for tool in tools}
         self.system_message = "You are a helpful assistant that breaks down problems into steps and solves them systematically."
         self.message_history = [{"role": "system", "content": self.system_message}]
 
@@ -74,10 +74,10 @@ class Agent:
             input=self.message_history,
             max_output_tokens=1024,
             # temperature=0.1,
-            tools=[tool.get_schema() for tool in self.tools] if self.tools else None,
+            # tools=[tool.get_schema() for tool in self.tools],
         )
         # Append the assistant's response to the message history
-        self.message_history.append({"role": "assistant", "content": response.output})
+        self.message_history.append({"role": "assistant", "content": response.output_text})
 
         return response
 
@@ -88,6 +88,7 @@ def run_agent():
 
         if message.lower() == "exit":
             break
+        response = agent.chat(message)
 
         max_iterations = 5
         for i in range(max_iterations):
@@ -95,16 +96,16 @@ def run_agent():
 
             tool_responses = []
             for item in response.output:
-                if item.type == "function":
+                if item.type == "function_call":
                     tool_name = item.name
                     tool_args = item.arguments
 
                     if tool_name in agent.tool_map:
                         tool = agent.tool_map[tool_name]
-                        tool_response = tool.execute(**tool_args)
+                        tool_response = tool.execute(json.loads(item.arguments))
 
                         tool_responses.append({
-                            "type": "function_output",
+                            "type": "function_call_output",
                             "call_id": item.call_id,
                             "output": json.dumps(tool_response)
                         })
