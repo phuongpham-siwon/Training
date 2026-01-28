@@ -1,4 +1,4 @@
-import anthropic
+import anthropic # import Anthropic SDK, Claude has its own SDK
 import os
 from dotenv import load_dotenv
 import json
